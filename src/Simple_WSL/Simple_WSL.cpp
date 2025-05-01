@@ -1,16 +1,59 @@
 #include <iostream>
 #include <Windows.h>
+#include <fstream>
+
+
+void RunCMDCommand(const std::string& command) {
+
+    std::wstring wideCommand = std::wstring(command.begin(), command.end());
+
+    STARTUPINFO si = { 0 };
+    PROCESS_INFORMATION pi = { 0 };
+
+
+    std::wstring fullCommand = L"cmd.exe /c " + wideCommand;
+
+
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+
+    if (CreateProcess(
+        NULL,                
+        &fullCommand[0],     
+        NULL,                
+        NULL,                  
+        TRUE,                 
+        0,                    
+        NULL,                
+        NULL,                
+        &si,                   
+        &pi                 
+    ) == 0) {
+        std::cerr << "CreateProcess failed. Error: " << GetLastError() << std::endl;
+        return;
+    }
+
+
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+}
+
 
 void installWSL() {
-    system("wsl --install");
+    RunCMDCommand("wsl -install");
 }
 
 void listDistros() {
-    system("wsl --list");
+    RunCMDCommand("wsl --list");
 }
 
 void listVerbose() {
-    system("wsl --list --verbose");
+    RunCMDCommand("wsl --list --verbose");
 }
 
 void setDefaultDistro(const std::string& distro) {
@@ -19,7 +62,7 @@ void setDefaultDistro(const std::string& distro) {
         return;
     }
     std::string cmd = "wsl --set-default " + distro;
-    system(cmd.c_str());
+    RunCMDCommand(cmd);
 }
 
 void setWSLVersion(const std::string& version) {
@@ -28,7 +71,7 @@ void setWSLVersion(const std::string& version) {
         return;
     }
     std::string cmd = "wsl --set-default-version " + version;
-    system(cmd.c_str());
+    RunCMDCommand(cmd);
 }
 
 void KillWSLDistro(const std::string& distro_name) {
@@ -37,7 +80,7 @@ void KillWSLDistro(const std::string& distro_name) {
         return;
     }
     std::string cmd = "wsl --terminate " + distro_name;
-    system(cmd.c_str());
+    RunCMDCommand(cmd);
 
 }
 
@@ -67,8 +110,18 @@ int main(int argc, char* argv[]) {
     go touch some C++ tutorials. But hey, you're here now you're learning hopefully.
     */
 
+    std::ofstream log("log.txt", std::ios::app);
+
+    if (!log) {
+        std::ofstream log("log.txt");
+    }
+
     std::string arg = argv[1]; 
     std::string third_arg = argc > 2 ? argv[2] : "";
+
+    log << "\n" << arg << " " << third_arg;
+
+    log.close();
 
     if (arg == "-install") {
         installWSL();
@@ -85,7 +138,7 @@ int main(int argc, char* argv[]) {
     else if (arg == "-set_version") {
         setWSLVersion(third_arg);
     }
-    else if (arg == "-help") {
+    else if (arg == "-help" || arg == "-h") {
         showHelp();
     }
     else if (arg == "-kill_distro") {
